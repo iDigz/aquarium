@@ -1,0 +1,118 @@
+# Основной свет
+0:
+  - start:
+      H: 13
+      M: 0
+    stop:
+      H: 19
+      M: 0
+# Аэратор подстветка мощные диоды
+1:
+  - start:
+      H: 0
+      M: 0
+    stop:
+      H: 0
+      M: 30
+  - start:
+      H: 21
+      M: 30
+    stop:
+      H: 22
+      M: 30
+  - start:
+      H: 23
+      M: 00
+    stop:
+      H: 23
+      M: 59
+# Помпа
+2:
+  - start:
+      H: 10
+      M: 30
+    stop:
+      H: 13
+      M: 15
+  - start:
+      H: 19
+      M: 0
+    stop:
+      H: 19
+      M: 30
+  - start:
+      H: 21
+      M: 0
+    stop:
+      H: 22
+      M: 0
+  - start:
+      H: 23
+      M: 0
+    stop:
+      H: 23
+      M: 45
+# POWER GLO 40 Bт
+3:
+  - start:
+      H: 9
+      M: 00
+    stop:
+      H: 13
+      M: 00
+  - start:
+      H: 19
+      M: 0
+    stop:
+      H: 19
+      M: 30
+# Сине-зелёная подсветка в крышке
+4:
+  - start:
+      H: 19
+      M: 00
+    stop:
+      H: 20
+      M: 00
+  - start:
+      H: 20
+      M: 30
+    stop:
+      H: 22
+      M: 30
+# Подсветка в крышке ЛИНЗЫ
+5:
+  - start:
+      H: 20
+      M: 00
+    stop:
+      H: 21
+      M: 30
+  - start:
+      H: 22
+      M: 30
+    stop:
+      H: 23
+      M: 15
+# Cиняя подстветка Тумбы
+6:
+  - start:
+      H: 19
+      M: 00
+    stop:
+      H: 21
+      M: 00
+# Лампа Т5
+7:
+  - start:
+      H: 20
+      M: 0
+    stop:
+      H: 20
+      M: 30
+  - start:
+      H: 21
+      M: 30
+    stop:
+      H: 22
+      M: 0

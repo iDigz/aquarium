@@ -3,84 +3,123 @@ package main
 import (
 	"fmt"
 	"github.com/stianeikeland/go-rpio"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 )
 
-var pinmap = [8]int{15, 18, 23, 24, 25, 8, 7, 1}
-var workdays = [8][8]int{
-	{13, 0, 15, 0, 15, 0, 19, 0},   // Основной свет
-	{5, 30, 7, 0, 22, 0, 23, 30},   // Аэратор подстветка мощные диоды
-	{5, 20, 13, 15, 19, 0, 21, 0},  // Помпа
-	{9, 0, 13, 0, 19, 0, 20, 0},    // POWER GLO 40 Bт
-	{19, 0, 20, 0, 20, 30, 22, 30}, // Сине-зелёная подсветка в крышке
-	{6, 0, 9, 0, 21, 0, 23, 0},     // Подсветка в крышке ЛИНЗЫ
-	{5, 25, 6, 25, 19, 0, 21, 0},   // Cиняя подстветка Тумбы
-	{20, 0, 20, 30, 21, 30, 22, 0}, // Лампа Т5
-}
+type Workdays map[int][]map[string]map[string]int
+type Holidays map[int][]map[string]map[string]int
+type Pins []int
 
-var holidays = [8][8]int{
-	{13, 0, 15, 0, 15, 0, 19, 0},     // Основной свет
-	{21, 30, 22, 30, 22, 30, 23, 15}, // Аэратор подстветка мощные диоды
-	{10, 30, 13, 15, 19, 0, 21, 0},   // Помпа
-	{9, 0, 13, 0, 19, 0, 20, 0},      // POWER GLO 40 Bт
-	{19, 0, 20, 0, 20, 30, 22, 30},   // Сине-зелёная подсветка в крышке
-	{20, 0, 21, 30, 22, 30, 23, 15},  // Подсветка в крышке ЛИНЗЫ
-	{19, 0, 20, 0, 20, 0, 21, 0},     // Cиняя подстветка Тумбы
-	{20, 0, 20, 30, 21, 30, 22, 0},   // Лампа Т5
+func Find(slice []bool, val bool) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
+	filename_wd, _ := filepath.Abs("./config/workdays.yaml")
+	yamlFile_wd, err := ioutil.ReadFile(filename_wd)
+	if err != nil {
+		panic(err)
+	}
+
+	filename_hd, _ := filepath.Abs("./config/holidays.yaml")
+	yamlFile_hd, err := ioutil.ReadFile(filename_hd)
+	if err != nil {
+		panic(err)
+	}
+
+	filename_pin, _ := filepath.Abs("./config/pins.yaml")
+	yamlFile_pin, err := ioutil.ReadFile(filename_pin)
+	if err != nil {
+		panic(err)
+	}
+
+	var config_wd Workdays
+	var config_hd Holidays
+	var config_pin Pins
+
+	err = yaml.Unmarshal(yamlFile_wd, &config_wd)
+	if err != nil {
+		panic(err)
+	}
+	err = yaml.Unmarshal(yamlFile_hd, &config_hd)
+	if err != nil {
+		panic(err)
+	}
+	err = yaml.Unmarshal(yamlFile_pin, &config_pin)
+	if err != nil {
+		panic(err)
+	}
+
 	// Open and map memory to access gpio, check for errors
 	if err := rpio.Open(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	// Unmap gpio memory when done
-	defer rpio.Close()
 
-	for pin := 0; pin < len(pinmap); pin++ {
-		rpio.Pin(pinmap[pin]).Output()
+	// Unmap gpio memory when done
+	//defer rpio.Close()
+
+	for pin := 0; pin < len(config_pin); pin++ {
+		rpio.Pin(config_pin[pin]).Output()
 	}
 Start:
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	c.Run()
 	now := time.Now()
 	if int(now.Weekday()) < 6 {
-		fmt.Println("Starting plan for Workdays")
-		for i := 0; i < len(workdays); i++ {
-			time1 := time.Date(now.Year(), now.Month(), now.Day(), workdays[i][0], workdays[i][1], 0, 0, time.Local)
-			time2 := time.Date(now.Year(), now.Month(), now.Day(), workdays[i][2], workdays[i][3], 0, 0, time.Local)
-			time3 := time.Date(now.Year(), now.Month(), now.Day(), workdays[i][4], workdays[i][5], 0, 0, time.Local)
-			time4 := time.Date(now.Year(), now.Month(), now.Day(), workdays[i][6], workdays[i][7], 0, 0, time.Local)
-			check1 := now.After(time1) && now.Before(time2)
-			check2 := now.After(time3) && now.Before(time4)
-			if check1 || check2 {
-				rpio.Pin(pinmap[i]).Low()
-				fmt.Println("Pin ", i, "status ", check1 || check2)
+		fmt.Println("Config for Weekdays")
+		for i := 0; i < len(config_wd); i++ {
+			check := make([]bool, 6)
+			for j := 0; j < len(config_wd[i]); j++ {
+				var starttime [7]time.Time
+				var stoptime [7]time.Time
+				starttime[j] = time.Date(now.Year(), now.Month(), now.Day(), config_wd[i][j]["start"]["H"], config_wd[i][j]["start"]["M"], 0, 0, time.Local)
+				stoptime[j] = time.Date(now.Year(), now.Month(), now.Day(), config_wd[i][j]["stop"]["H"], config_wd[i][j]["stop"]["M"], 0, 0, time.Local)
+				check[j] = now.After(starttime[j]) && now.Before(stoptime[j])
+				fmt.Println("Cicle", j, "--->", starttime[j].Hour(), starttime[j].Minute(), "-", stoptime[j].Hour(), stoptime[j].Minute(), "--->", check[j])
+			}
+			if Find(check, true) {
+				fmt.Println("Pin set in LOW")
+				rpio.Pin(config_pin[i]).Low()
 			} else {
-				rpio.Pin(pinmap[i]).High()
-				fmt.Println("Pin ", i, "status ", check1 || check2)
+				fmt.Println("Pin set in HIGH")
+				rpio.Pin(config_pin[i]).High()
 			}
 		}
 	} else {
-		fmt.Println("Starting plan for Holydays")
-		for i := 0; i < len(holidays); i++ {
-			time1 := time.Date(now.Year(), now.Month(), now.Day(), holidays[i][0], holidays[i][1], 0, 0, time.Local)
-			time2 := time.Date(now.Year(), now.Month(), now.Day(), holidays[i][2], holidays[i][3], 0, 0, time.Local)
-			time3 := time.Date(now.Year(), now.Month(), now.Day(), holidays[i][4], holidays[i][5], 0, 0, time.Local)
-			time4 := time.Date(now.Year(), now.Month(), now.Day(), holidays[i][6], holidays[i][7], 0, 0, time.Local)
-			check1 := now.After(time1) && now.Before(time2)
-			check2 := now.After(time3) && now.Before(time4)
-			if check1 || check2 {
-				rpio.Pin(pinmap[i]).Low()
-				fmt.Println("Pin ", i, "status ", check1 || check2)
+		fmt.Println("Config for Holidays")
+		for i := 0; i < len(config_hd); i++ {
+			check := make([]bool, 6)
+			for j := 0; j < len(config_hd[i]); j++ {
+				var starttime [7]time.Time
+				var stoptime [7]time.Time
+				starttime[j] = time.Date(now.Year(), now.Month(), now.Day(), config_hd[i][j]["start"]["H"], config_hd[i][j]["start"]["M"], 0, 0, time.Local)
+				stoptime[j] = time.Date(now.Year(), now.Month(), now.Day(), config_hd[i][j]["stop"]["H"], config_hd[i][j]["stop"]["M"], 0, 0, time.Local)
+				check[j] = now.After(starttime[j]) && now.Before(stoptime[j])
+				fmt.Println("Cicle", j, "--->", starttime[j].Hour(), starttime[j].Minute(), "-", stoptime[j].Hour(), stoptime[j].Minute(), "--->", check[j])
+			}
+			if Find(check, true) {
+				fmt.Println("Pin set in LOW")
+				rpio.Pin(config_pin[i]).Low()
 			} else {
-				rpio.Pin(pinmap[i]).High()
-				fmt.Println("Pin ", i, "status ", check1 || check2)
+				fmt.Println("Pin set in HIGH")
+				rpio.Pin(config_pin[i]).High()
 			}
 		}
 	}
 	fmt.Println("---------------------------------------")
 	fmt.Println("Time now: ", now.Local())
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	goto Start
 }
