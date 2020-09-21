@@ -118,6 +118,7 @@ Start:
 			}
 		}
 	}
+
 	fmt.Println("---------------------------------------")
 	fmt.Println("Time now: ", now.Local())
 	time.Sleep(1 * time.Second)
